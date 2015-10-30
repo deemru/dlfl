@@ -1,0 +1,34 @@
+#include <windows.h>
+
+2 ICON "dlfl.ico"
+
+#define PCS_VERSION             1,15,10,30
+#define PCS_VERSION_STR         "6K\0"
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION     PCS_VERSION
+PRODUCTVERSION  PCS_VERSION
+FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
+//FILEFLAGS       0
+//FILEOS          VOS_NT_WINDOWS32
+//FILETYPE        VFT_APP
+//FILESUBTYPE     VFT2_UNKNOWN
+
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904E4"
+        BEGIN
+            VALUE "FileDescription", "Downloads files via WinHTTP\0"
+            VALUE "LegalCopyright", "deemru\0"
+            VALUE "OriginalFilename", "dlfl.exe\0"
+            VALUE "ProductName", "dlfl\0"
+            VALUE "ProductVersion", PCS_VERSION_STR
+        END
+    END
+
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1252
+    END
+END
