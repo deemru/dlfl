@@ -167,6 +167,16 @@ DWORD winhttp_exec( winhttp_handler * h )
             goto end;
     }
 
+    if( h->isSSL )
+    {
+        isOK = WinHttpSetOption( h->hRequest, 
+                                 WINHTTP_OPTION_CLIENT_CERT_CONTEXT,
+                                 WINHTTP_NO_CLIENT_CERT_CONTEXT, 0 );
+
+        if( !isOK )
+            goto end;
+    }
+
     isOK = WinHttpSendRequest( h->hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0,
                                WINHTTP_NO_REQUEST_DATA, 0, 0, 0 );
 
