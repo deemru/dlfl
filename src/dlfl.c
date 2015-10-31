@@ -356,13 +356,13 @@ unsigned wstrbrk( wchar_t * wstr, wchar_t ** wstrs, unsigned max,
 #define LOG_ERR_WINHTTP    "WinHTTP unknown error"
 #define LOG_ERR_CREATEFILE "CreateFile failed"
 #define LOG_ERR_WFILE      "WriteFile failed"
-#define LOG_ERR_EPILOG     ".\r\n"
+#define LOG_ERR_EPILOG     "\r\n"
 
-#define LOG_DLFL_PROLOG      "DLFL "
-#define LOG_DLFL_WORK_PROLOG "(.."
+#define LOG_DLFL_PROLOG      "Download "
+#define LOG_DLFL_WORK_PROLOG "(..."
 #define LOG_DLFL_WORK        "."
 #define LOG_DLFL_WORK_EPILOG ")"
-#define LOG_DLFL_SUCCESS     " OK.\r\n"
+#define LOG_DLFL_SUCCESS     " OK\r\n"
 
 void strlog( HANDLE hOut, unsigned count, ... )
 {
@@ -386,8 +386,8 @@ void strlog( HANDLE hOut, unsigned count, ... )
 void __cdecl mainCRTStartup()
 {
     winhttp_handler h;
-    unsigned        counter;
-    unsigned        quanter;
+    unsigned        cnt;
+    unsigned        qnt;
     HANDLE          hFile = INVALID_HANDLE_VALUE;
     HANDLE          hOut = INVALID_HANDLE_VALUE;
 
@@ -407,6 +407,7 @@ void __cdecl mainCRTStartup()
         h.url = wstrs[1];
         h.isSSL = h.url[4] == 's';
         h.filename = wstrs[2];
+        h.url_get = L"/";
 
         memcopy( h.bbChunk, wstrs[1], 2 * ( wstrs[2] - wstrs[1] ) );
     }
@@ -414,24 +415,27 @@ void __cdecl mainCRTStartup()
     {
         wchar_t * wstrs[3];
 
-        if( 3 != 
-            wstrbrk( (wchar_t *)h.bbChunk, (wchar_t **)&wstrs, 3, '/', '#' ) )
+        cnt = wstrbrk( (wchar_t *)h.bbChunk, (wchar_t **)&wstrs, 3, '/', '#' );
+
+        if( cnt == 3 )
+        {
+            h.url_get = &h.url[wstrs[2] - wstrs[0] - 1];
+        }
+        else if( cnt != 2 )
         {
             strlog( hOut, 3, LOG_ERR_PROLOG, LOG_ERR_BAD_CMD, LOG_ERR_EPILOG );
             goto end;
         }
 
-        h.url_get = &h.url[wstrs[2] - wstrs[0] - 1];
-
-        counter = wstrbrk( wstrs[1], (wchar_t **)&wstrs, 2, ':', '#' );
+        cnt = wstrbrk( wstrs[1], (wchar_t **)&wstrs, 2, ':', '#' );
 
         h.server = wstrs[0];
 
-        if( counter == 1 )
+        if( cnt == 1 )
         {
             h.port = h.isSSL ? 443 : 80; // default choice
         }
-        else if( counter == 2 )
+        else if( cnt == 2 )
         {
             h.port = (INTERNET_PORT)wstr2num( wstrs[1] );
         }
@@ -442,8 +446,8 @@ void __cdecl mainCRTStartup()
         }
     }
 
-    counter = 0;
-    quanter = 1024 * 1024 / 50 / sizeof( h.bbChunk ) + 1;
+    cnt = 0;
+    qnt = 1024 * 1024 / 50 / sizeof( h.bbChunk ) + 1;
 
     for( ;; )
     {
@@ -500,12 +504,12 @@ void __cdecl mainCRTStartup()
             }
 
             if( h.dwTotal && h.dwTotal > 1024 * 1024 )
-                quanter = h.dwTotal / 50 / sizeof( h.bbChunk ) + 1;
+                qnt = h.dwTotal / 50 / sizeof( h.bbChunk ) + 1;
 
             if( h.dwTotal )
             {
-                strlog( hOut, 4, LOG_DLFL_PROLOG, num2str_bs( h.dwLoaded ), " ",
-                        LOG_DLFL_WORK_PROLOG );
+                strlog( hOut, 5, LOG_DLFL_PROLOG, "(", num2str_bs( h.dwTotal ),
+                        ") ", LOG_DLFL_WORK_PROLOG );
             }
             else
             {
@@ -517,8 +521,8 @@ void __cdecl mainCRTStartup()
         {
             if( !h.dwTotal )
             {
-                strlog( hOut, 4, LOG_DLFL_WORK_EPILOG, " ", 
-                        num2str_bs( h.dwLoaded ), LOG_DLFL_SUCCESS );
+                strlog( hOut, 5, LOG_DLFL_WORK_EPILOG, " (", 
+                        num2str_bs( h.dwLoaded ), ")", LOG_DLFL_SUCCESS );
             } 
             else
             {
@@ -536,9 +540,9 @@ void __cdecl mainCRTStartup()
             goto end;
         }
 
-        counter++;
+        cnt++;
 
-        if( counter % quanter == 0 )
+        if( cnt % qnt == 0 )
             strlog( hOut, 1, LOG_DLFL_WORK );
     }
 
