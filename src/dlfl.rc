@@ -19,7 +19,7 @@ BEGIN
     BEGIN
         BLOCK "040904E4"
         BEGIN
-            VALUE "FileDescription", "Download file via WinHTTP\0"
+            VALUE "FileDescription", "Download files via WinHTTP\0"
             VALUE "LegalCopyright", "deemru\0"
             VALUE "OriginalFilename", "dlfl.exe\0"
             VALUE "ProductName", "dlfl\0"
