@@ -3,7 +3,7 @@
 
 dlfl is a simple console application to download files via WinHTTP in Windows.
 
-- It detects proxy settings automatically.
+- It detects proxy settings automatically
 - It works with http and https
 - Usage: dlfl.exe "url" "file"
 
