@@ -579,7 +579,7 @@ end:
     if( hFile != INVALID_HANDLE_VALUE )
     {
         CloseHandle( hFile );
-        DeleteFile( h.filename );
+        DeleteFileW( h.filename );
     }
 
     ExitProcess( 1 );
