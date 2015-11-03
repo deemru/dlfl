@@ -2,7 +2,7 @@
 
 2 ICON "dlfl.ico"
 
-#define PCS_VERSION             1,15,10,31
+#define PCS_VERSION             1,15,11,03
 #define PCS_VERSION_STR         "8K\0"
 
 VS_VERSION_INFO VERSIONINFO

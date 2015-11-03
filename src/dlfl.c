@@ -6,31 +6,26 @@
 
 void memzero( void * mem, size_t size ) // anti memset
 {
-    do
+    while( size-- )
     {
-        ( (volatile char *)mem )[--size] = 0;
+        ( (volatile char *)mem )[size] = 0;
     }
-    while( size );
 }
 
-void memcopy( void * dst, void * src, size_t size ) // anti memcpy
+void memcopy( void * dst, const void * src, size_t size ) // anti memcpy
 {
-    do
+    while( size-- )
     {
-        ( (volatile char *)dst )[--size] = ( (volatile char *)src )[--size];
+        ( (volatile char *)dst )[size] = ( (volatile char *)src )[size];
     }
-    while( size );
 }
 
-unsigned strlength( char * str ) // anti strlen
+unsigned strlength( const char * str ) // anti strlen
 {
     unsigned length = 0;
 
-    while( 0 != *str )
-    {
+    while( 0 != *str++ )
         length++;
-        str++;
-    }
 
     return length;
 }
@@ -41,13 +36,13 @@ unsigned strlength( char * str ) // anti strlen
 
 typedef struct
 {
-    LPCWSTR url;
-    LPCWSTR url_get;
-    LPCWSTR server;
+    PWSTR url;
+    PWSTR url_get;
+    PWSTR server;
     INTERNET_PORT port;
     BOOL isSSL;
 
-    LPCWSTR filename;
+    PWSTR filename;
     BYTE bbChunk[WINHTTP_CHUNK];
     DWORD dwChunk;
     DWORD dwLoaded;
@@ -243,7 +238,7 @@ end:
     }
 }
 
-unsigned wstr2num( wchar_t * wstr )
+unsigned wstr2num( const wchar_t * wstr )
 {
     unsigned u = 0;
     wchar_t c;
@@ -254,12 +249,52 @@ unsigned wstr2num( wchar_t * wstr )
     return u;
 }
 
-char bytesize_MB[] = "_____ MB";
-char bytesize_KB[] = "_____ KB";
-char bytesize_B[]  = "_____ B";
+char * wstr2str( const wchar_t * wstr )
+{
+    static char buf[MAX_PATH];
+    return WideCharToMultiByte( GetConsoleOutputCP(), 0, wstr,-1, buf,
+                                sizeof( buf ), NULL, NULL ) ? buf : NULL;
+}
+
+/*
+Download "___________________________...___________________________" (13337 KB)
+*/
+#define NAME_HALF 27
+#define NAME_FULL ( NAME_HALF + 3 + NAME_HALF + 1)
+#define NAME_BRK "..."
+
+char * wstr2name( const wchar_t * wstr )
+{
+    static char buf[NAME_FULL];
+    char * str = wstr2str( wstr );
+    int shift;
+
+    if( !str )
+        return NAME_BRK;
+
+    shift = sizeof( buf ) - 1 - strlength( str );
+
+    if( shift < 0 )
+    {
+        memcopy( buf, str, NAME_HALF );
+        memcopy( buf + NAME_HALF, NAME_BRK, 3 );
+        memcopy( buf + NAME_HALF + 3,
+                 str + sizeof( buf ) - 1 - shift - NAME_HALF, NAME_HALF + 1 );
+    }
+    else
+    {
+        memcopy( buf, str, sizeof( buf ) - shift );
+    }
+
+    return buf;
+}
 
 char * num2str_bs( unsigned u )
 {
+    static char bytesize_MB[] = "_____ MB";
+    static char bytesize_KB[] = "_____ KB";
+    static char bytesize_B[]  = "_____ B";
+
     char * measure;
     char * str;
 
@@ -368,12 +403,6 @@ unsigned wstrbrk( wchar_t * wstr, wchar_t ** wstrs, unsigned max,
 #define LOG_ERR_WFILE      "WriteFile failed"
 #define LOG_ERR_EPILOG     "\r\n"
 
-#define LOG_DLFL_PROLOG      "Download "
-#define LOG_DLFL_WORK_PROLOG "(..."
-#define LOG_DLFL_WORK        "."
-#define LOG_DLFL_WORK_EPILOG ")"
-#define LOG_DLFL_SUCCESS     " OK\r\n"
-
 void strlog( HANDLE hOut, unsigned count, ... )
 {
     if( hOut != INVALID_HANDLE_VALUE )
@@ -386,7 +415,8 @@ void strlog( HANDLE hOut, unsigned count, ... )
             DWORD dw;
             char * str = va_arg( strs, char * );
 
-            WriteFile( hOut, str, strlength( str ), &dw, NULL );
+            if( str )
+                WriteFile( hOut, str, strlength( str ), &dw, NULL );
         }
 
         va_end( strs );
@@ -400,6 +430,8 @@ void __cdecl mainCRTStartup()
     unsigned        qnt;
     HANDLE          hFile = INVALID_HANDLE_VALUE;
     HANDLE          hOut = INVALID_HANDLE_VALUE;
+
+    memzero( &h, sizeof( winhttp_handler ) );
 
     hOut = GetStdHandle( STD_OUTPUT_HANDLE );
 
@@ -457,7 +489,7 @@ void __cdecl mainCRTStartup()
     }
 
     cnt = 0;
-    qnt = 1024 * 1024 / 50 / sizeof( h.bbChunk ) + 1;
+    qnt = 1024 * 1024 / 64 / sizeof( h.bbChunk ) + 1;
 
     for( ;; )
     {
@@ -470,7 +502,7 @@ void __cdecl mainCRTStartup()
                   FormatMessageW( FORMAT_MESSAGE_FROM_SYSTEM |
                                   FORMAT_MESSAGE_IGNORE_INSERTS, NULL, dw,
                                   MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ),
-                                  (LPWSTR)h.bbChunk, sizeof( h.bbChunk ) / 2,
+                                  (PWSTR)h.bbChunk, sizeof( h.bbChunk ) / 2,
                                   NULL )
                 ) != S_OK
                 || 
@@ -479,18 +511,12 @@ void __cdecl mainCRTStartup()
                                   FORMAT_MESSAGE_IGNORE_INSERTS,
                                   (VOID *)GetModuleHandleA( "winhttp.dll" ), dw,
                                   MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ),
-                                  (LPWSTR)h.bbChunk, sizeof( h.bbChunk ) / 2,
+                                  (PWSTR)h.bbChunk, sizeof( h.bbChunk ) / 2,
                                   NULL )
                 ) != S_OK
               )
             {
-                WideCharToMultiByte( GetConsoleOutputCP(), 0, (LPWSTR)h.bbChunk,
-                                     -1,
-                                     (LPSTR)h.bbChunk + sizeof( h.bbChunk ) / 2,
-                                     sizeof( h.bbChunk ) / 2, NULL, NULL );
-
-                strlog( hOut, 2, LOG_ERR_PROLOG,
-                        h.bbChunk + sizeof( h.bbChunk ) / 2 );
+                strlog( hOut, 2, LOG_ERR_PROLOG, wstr2str( (PWSTR)h.bbChunk ) );
             }
             else
             {
@@ -512,32 +538,24 @@ void __cdecl mainCRTStartup()
                         LOG_ERR_EPILOG );
                 goto end;
             }
+            
+            strlog( hOut, 3, "Download \"", wstr2name( h.url ), "\"" );
 
             if( h.dwTotal && h.dwTotal > 1024 * 1024 )
-                qnt = h.dwTotal / 50 / sizeof( h.bbChunk ) + 1;
+                qnt = h.dwTotal / 64 / sizeof( h.bbChunk ) + 1;
 
             if( h.dwTotal )
-            {
-                strlog( hOut, 5, LOG_DLFL_PROLOG, "(", num2str_bs( h.dwTotal ),
-                        ") ", LOG_DLFL_WORK_PROLOG );
-            }
-            else
-            {
-                strlog( hOut, 2, LOG_DLFL_PROLOG, LOG_DLFL_WORK_PROLOG );
-            }
+                strlog( hOut, 3, " (", num2str_bs( h.dwTotal ), ")" );
+
+            strlog( hOut, 1, "\r\n..." );
         }
 
         if( h.dwChunk == 0 )
         {
             if( !h.dwTotal )
-            {
-                strlog( hOut, 5, LOG_DLFL_WORK_EPILOG, " (", 
-                        num2str_bs( h.dwLoaded ), ")", LOG_DLFL_SUCCESS );
-            } 
-            else
-            {
-                strlog( hOut, 2, LOG_DLFL_WORK_EPILOG, LOG_DLFL_SUCCESS );
-            }
+                strlog( hOut, 5, " (", num2str_bs( h.dwLoaded ), ")" );
+
+            strlog( hOut, 1, " OK\r\n" );
 
             CloseHandle( hFile );
             ExitProcess( 0 ); // SUCCESS
@@ -553,13 +571,16 @@ void __cdecl mainCRTStartup()
         cnt++;
 
         if( cnt % qnt == 0 )
-            strlog( hOut, 1, LOG_DLFL_WORK );
+            strlog( hOut, 1, "." );
     }
 
 end:
 
     if( hFile != INVALID_HANDLE_VALUE )
+    {
         CloseHandle( hFile );
+        DeleteFile( h.filename );
+    }
 
     ExitProcess( 1 );
 }
