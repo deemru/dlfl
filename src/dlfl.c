@@ -553,7 +553,7 @@ void __cdecl mainCRTStartup()
         if( h.dwChunk == 0 )
         {
             if( !h.dwTotal )
-                strlog( hOut, 5, " (", num2str_bs( h.dwLoaded ), ")" );
+                strlog( hOut, 3, " (", num2str_bs( h.dwLoaded ), ")" );
 
             strlog( hOut, 1, " OK\r\n" );
 
